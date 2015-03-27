@@ -3,6 +3,7 @@
 __author__ = 'Alexander Ponomarev'
 
 import sys
+import re
 import subprocess
 from optparse import OptionParser, OptionGroup
 from pyevolve import G1DList, GSimpleGA, Consts, Mutators, Selectors
@@ -52,7 +53,7 @@ def get_options():
                         help="[REQUIRED] The value that function will attempt to reach. [default: %default]")
     group_general.add_option("--initial-values", dest="initial_values", action="callback",
                         callback=vararg_callback,
-                        help="[REQUIRED] Initial arguments values. [default: %default]")
+                        help="[NOT SUPPORTED YET] Initial arguments values. [default: %default]")
     group_general.add_option("--multithreading", type="int", dest="multithreading",
                         default=0,
                         help="Enables multithreading (1 or 0). [default: %default]")
@@ -74,6 +75,10 @@ def get_options():
     group_ga.add_option("--crossover-rate", type="float", dest="crossover_rate",
                         default=Consts.CDefGACrossoverRate,
                         help="Crossover rate. Range: 0.0-1.0. [default: %default]")
+    group_ga.add_option("--selector", dest="selector",
+                        default='GRankSelector',
+                        help="Default selector. May be GRankSelector, GTournamentSelector, "
+                             "GUniformSelector, GRouletteWheel. [default: %default]")
     group_ga.add_option("--ellitism-replacement", type="int", dest="ellitism_replacement",
                         default=Consts.CDefGAElitismReplacement,
                         help="How many best organisms of this generation will be used in the next generation "
@@ -124,8 +129,7 @@ def get_options():
 
     (options, args) = parser.parse_args()
 
-    if not options.cmd or not options.target_value\
-            or not options.initial_values:
+    if not options.cmd or not options.target_value:
         parser.print_help()
         exit(1)
 
@@ -196,54 +200,42 @@ def main():
         global cache
         cache = InMemoryCache()
 
-    genome = G1DList.G1DList(len(opts.initial_values))
+    num_args = len([m.start() for m in re.finditer('{}', opts.cmd)])
+
+    genome = G1DList.G1DList(num_args)
     genome.mutator.set(Mutators.G1DListMutatorIntegerGaussian)
-    genome.setInternalList([int(val) for val in opts.initial_values])
     genome.setParams(cmd_template=opts.cmd)
     genome.setParams(target_value=opts.target_value)
     genome.setParams(bestrawscore=0)
     genome.setParams(print_organisms=opts.print_organisms)
-
-    if opts.min_value:
-        genome.setParams(rangemin=opts.min_value)
-
-    if opts.max_value:
-        genome.setParams(rangemax=opts.max_value)
-
-    if opts.mutation_gauss_mu:
-        genome.setParams(gauss_mu=opts.mutation_gauss_mu)
-
-    if opts.mutation_gauss_sigma:
-        genome.setParams(gauss_sigma=opts.mutation_gauss_sigma)
+    genome.setParams(rangemin=opts.min_value)
+    genome.setParams(rangemax=opts.max_value)
+    genome.setParams(gauss_mu=opts.mutation_gauss_mu)
+    genome.setParams(gauss_sigma=opts.mutation_gauss_sigma)
 
     genome.evaluator.set(eval_func)
 
     ga = GSimpleGA.GSimpleGA(genome)
     ga.stepCallback.set(step_callback)
     ga.setGenerations(opts.generations)
-    ga.selector.set(Selectors.GRouletteWheel)
+    ga.selector.set(getattr(Selectors, opts.selector))
     ga.setMinimax(Consts.minimaxType["minimize"])
     ga.terminationCriteria.set(GSimpleGA.RawScoreCriteria)
     ga.setParams(freq_stats=opts.stats_show_freq)
     ga.setParams(print_organisms=opts.print_organisms)
 
-    if opts.ellitism_replacement:
+    if opts.ellitism_replacement == 0:
+        ga.setElitism(False)
+    else:
+        ga.setElitism(True)
         ga.setElitismReplacement(opts.ellitism_replacement)
 
-    if opts.multithreading:
-        ga.setMultiProcessing(True if opts.multithreading == 1 else False)
+    ga.setMultiProcessing(True if opts.multithreading == 1 else False)
+    ga.setPopulationSize(opts.population)
+    ga.setMutationRate(opts.mutation_rate)
+    ga.setCrossoverRate(opts.crossover_rate)
 
-    if opts.population:
-        ga.setPopulationSize(opts.population)
-
-    if opts.mutation_rate:
-        ga.setMutationRate(opts.mutation_rate)
-
-    if opts.crossover_rate:
-        ga.setCrossoverRate(opts.crossover_rate)
-
-    if opts.stats_show_freq:
-        ga.evolve(freq_stats=opts.stats_show_freq)
+    ga.evolve(freq_stats=opts.stats_show_freq)
 
     print_best(ga)
 
