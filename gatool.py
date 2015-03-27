@@ -1,8 +1,9 @@
-#!/usr/bin/python
-__author__ = 'lamerman'
+#!/usr/bin/env python
 
+__author__ = 'Alexander Ponomarev'
+
+import sys
 import subprocess
-import pickle
 from optparse import OptionParser, OptionGroup
 from pyevolve import G1DList, GSimpleGA, Consts, Mutators, Selectors
 
@@ -46,31 +47,37 @@ def get_options():
     group_general = OptionGroup(parser, "General options")
 
     group_general.add_option("--cmd", dest="cmd",
-                    help="Command pattern to be executed")
+                        help="[REQUIRED] Command pattern to be executed. [default: %default]")
     group_general.add_option("--target-value", type="float", dest="target_value",
-                    help="The value that function will attempt to reach")
+                        help="[REQUIRED] The value that function will attempt to reach. [default: %default]")
     group_general.add_option("--initial-values", dest="initial_values", action="callback",
-                      callback=vararg_callback, help="Initial arguments values")
-    group_general.add_option("--multithreading", type="int", dest="multithreading", default=0,
-                    help="Enables multithreading (1 or 0)")
+                        callback=vararg_callback,
+                        help="[REQUIRED] Initial arguments values. [default: %default]")
+    group_general.add_option("--multithreading", type="int", dest="multithreading",
+                        default=0,
+                        help="Enables multithreading (1 or 0). [default: %default]")
 
     parser.add_option_group(group_general)
 
 
     group_ga = OptionGroup(parser, "Genetic algorithm common")
 
-    group_ga.add_option("--generations", type="int", dest="generations", default=Consts.CDefGAGenerations,
-                    help="Maximum number of generations. Range: 1-inf")
-    group_ga.add_option("--population", type="int", dest="population", default=Consts.CDefGAPopulationSize,
-                    help="Size of population. Range: 2-inf")
-    group_ga.add_option("--mutation-rate", type="float", dest="mutation_rate", default=Consts.CDefGAMutationRate,
-                    help="Mutation rate. Range: 0.0-1.0")
-    group_ga.add_option("--crossover-rate", type="float", dest="crossover_rate", default=Consts.CDefGACrossoverRate,
-                    help="Crossover rate. Range: 0.0-1.0")
+    group_ga.add_option("--generations", type="int", dest="generations",
+                        default=Consts.CDefGAGenerations,
+                        help="Maximum number of generations. Range: 1-inf. [default: %default]")
+    group_ga.add_option("--population", type="int", dest="population",
+                        default=Consts.CDefGAPopulationSize,
+                        help="Size of population. Range: 2-inf. [default: %default]",)
+    group_ga.add_option("--mutation-rate", type="float", dest="mutation_rate",
+                        default=Consts.CDefGAMutationRate,
+                        help="Mutation rate. Range: 0.0-1.0. [default: %default]")
+    group_ga.add_option("--crossover-rate", type="float", dest="crossover_rate",
+                        default=Consts.CDefGACrossoverRate,
+                        help="Crossover rate. Range: 0.0-1.0. [default: %default]")
     group_ga.add_option("--ellitism-replacement", type="int", dest="ellitism_replacement",
                         default=Consts.CDefGAElitismReplacement,
                         help="How many best organisms of this generation will be used in the next generation "
-                            "without modification. Range: 0-population")
+                            "without modification. Range: 0-population. [default: %default]")
 
     parser.add_option_group(group_ga)
 
@@ -78,31 +85,39 @@ def get_options():
     group_gauss = OptionGroup(parser, "Gaussian mutator options")
 
     group_gauss.add_option("--min-value", type="float", dest="min_value",
-                    help="Minimal possible value of any of parameters")
+                        default=Consts.CDefRangeMin,
+                        help="Minimal possible value of any of parameters. [default: %default]")
     group_gauss.add_option("--max-value", type="float", dest="max_value",
-                    help="Maximum possible value of any of parameters")
+                        default=Consts.CDefRangeMax,
+                        help="Maximum possible value of any of parameters. [default: %default]")
     group_gauss.add_option("--mutation-gauss-mu", type="float", dest="mutation_gauss_mu",
-                    help="Mu in gauss distribution for mutation step")
+                        default=Consts.CDefG1DListMutIntMU,
+                        help="Mu in gauss distribution for mutation step. [default: %default]")
     group_gauss.add_option("--mutation-gauss-sigma", type="float", dest="mutation_gauss_sigma",
-                    help="Sigma in gauss distribution for mutation step")
+                        default=Consts.CDefG1DListMutIntSIGMA,
+                        help="Sigma in gauss distribution for mutation step. [default: %default]")
 
     parser.add_option_group(group_gauss)
 
 
     group_stat = OptionGroup(parser, "Statistics")
 
-    group_stat.add_option("--stats-show-freq", dest="stats_show_freq", default=10, type='int',
-                    help="How frequently statistics will be shown. Once in n iteration. 0 - do not show.")
-    group_stat.add_option("--print-organisms", dest="print_organisms", default=0, type='int',
-                    help="Prints organisms at each iteration (0 or 1)")
+    group_stat.add_option("--stats-show-freq", dest="stats_show_freq", type='int',
+                        default=10,
+                        help="How frequently statistics will be shown. Once in n iteration. 0 - do not show. "
+                         "[default: %default]")
+    group_stat.add_option("--print-organisms", dest="print_organisms", type='int',
+                        default=0,
+                        help="Prints organisms at each iteration (0 or 1). [default: %default]")
 
     parser.add_option_group(group_stat)
 
 
     group_cache = OptionGroup(parser, "Cache")
 
-    group_cache.add_option("--use-cache", dest="use_cache", default=1, type='int',
-                    help="Specifies whether cache will be used (0 or 1)")
+    group_cache.add_option("--use-cache", dest="use_cache", type='int',
+                        default=1,
+                        help="Specifies whether cache will be used (0 or 1). [default: %default]")
 
     parser.add_option_group(group_cache)
 
@@ -111,13 +126,14 @@ def get_options():
 
     if not options.cmd or not options.target_value\
             or not options.initial_values:
-        raise KeyError('Not all required options specified')
+        parser.print_help()
+        exit(1)
 
     return options
 
 
 def get_bad_value():
-    return 100000 # TODO: correct it
+    return sys.maxint # TODO: correct it
 
 def execute_cmd(cmd_template, args):
     args = map(int, args)
