@@ -43,7 +43,7 @@ def vararg_callback(option, opt_str, value, parser):
     setattr(parser.values, option.dest, value)
 
 def get_options():
-    parser = OptionParser()
+    parser = OptionParser(usage="gatool.py --cmd \"python -c \"print 2*{}+4*pow({},2)\"\" --target-value 32 OPTS...")
 
     group_general = OptionGroup(parser, "General options")
 
@@ -129,8 +129,12 @@ def get_options():
 
     (options, args) = parser.parse_args()
 
-    if not options.cmd or not options.target_value:
-        parser.print_help()
+    if not options.cmd:
+        print "Cmd not specified"
+        exit(1)
+
+    if not options.target_value:
+        print "Target value not specified"
         exit(1)
 
     return options
