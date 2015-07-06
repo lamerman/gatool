@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 REQUIRES = ['pyevolve', ]
 
 setup(name='GATool',
-      version='0.8',
+      version='1.0',
       description='Utility for adjustment of parameters for console applications with genetic algorithm',
       author='Alexander Ponomarev',
       author_email='alexander996@yandex.ru',
@@ -15,4 +15,13 @@ setup(name='GATool',
       scripts=['gatool.py'],
       packages=find_packages(),
       install_requires=REQUIRES,
+      license="BSD",
+      platforms=["Independent"],
+      classifiers=[
+          "Development Status :: 5 - Production/Stable",
+          "Intended Audience :: Developers",
+          "Operating System :: OS Independent",
+          "Programming Language :: Python",
+          "Topic :: Software Development :: Libraries",
+      ],
      )
