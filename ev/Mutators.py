@@ -1,4 +1,4 @@
-__author__ = 'lamerman'
+__author__ = 'Alexander Ponomarev'
 
 from pyevolve import Util
 from random import randint as rand_randint, gauss as rand_gauss

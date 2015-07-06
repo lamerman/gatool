@@ -5,9 +5,9 @@ __author__ = 'Alexander Ponomarev'
 import sys
 import re
 import subprocess
+from ev import Mutators, Initializators
 from optparse import OptionParser, OptionGroup
 from pyevolve import G1DList, GSimpleGA, Consts, Selectors
-from gatool import Mutators, Initializators
 
 
 RANGE_TEMPLATE = '{{(-?\d+),(-?\d+)}}'
