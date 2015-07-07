@@ -4,7 +4,12 @@ __author__ = 'Alexander Ponomarev'
 
 import sys
 import re
+import os
 import subprocess
+import tempfile
+import pickle
+import hashlib
+from os import path
 from ev import Mutators, Initializators
 from optparse import OptionParser, OptionGroup
 from pyevolve import G1DList, GSimpleGA, Consts, Selectors
@@ -13,18 +18,27 @@ from pyevolve import G1DList, GSimpleGA, Consts, Selectors
 RANGE_TEMPLATE = '{{(-?\d+),(-?\d+)}}'
 
 
-class InMemoryCache:
+class TempFsCache:
     def __init__(self):
-        self.db = {}
+        self.tempdir = path.join(tempfile.gettempdir(), 'gatool')
+
+        if not path.exists(self.tempdir):
+            os.makedirs(self.tempdir)
 
     def get(self, key):
-        if not key in self.db:
-            raise KeyError("No such key in db")
+        hash_key = hashlib.md5(key).hexdigest()
+        filename = path.join(self.tempdir, hash_key)
+        if not path.exists(filename):
+            raise KeyError("No such key in cache")
 
-        return self.db[key]
+        with open(filename, 'rb') as f:
+            return pickle.load(f)
 
     def put(self, key, value):
-        self.db[key] = value
+        hash_key = hashlib.md5(key).hexdigest()
+        filename = path.join(self.tempdir, hash_key)
+        with open(filename, 'wb') as f:
+            return pickle.dump(value, f)
 
 
 class FakeCache:
@@ -144,8 +158,9 @@ def get_options():
     group_cache = OptionGroup(parser, "Cache")
 
     group_cache.add_option("--use-cache", dest="use_cache", type='int',
-                           default=1,
+                           default=0,
                            help="Specifies whether cache will be used (0 or 1). "
+                                "Warning: Default cache is file system cache in temp directory. "
                                 "[default: %default]")
 
     parser.add_option_group(group_cache)
@@ -229,7 +244,7 @@ def main():
 
     if opts.use_cache:
         global cache
-        cache = InMemoryCache()
+        cache = TempFsCache()
 
     # escapes cmd string replacing {} by {{}}
     opts.cmd = re.sub('{(?P<block>[^}]*)}', '{{\g<block>}}', opts.cmd)
