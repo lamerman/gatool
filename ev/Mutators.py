@@ -42,8 +42,8 @@ def G1DListMutatorIntegerGaussian(genome, **args):
             which_gene = rand_randint(0, listSize - 1)
             final_value = genome[which_gene] + int(rand_gauss(mu, sigma))
 
-            final_value = min(final_value, genome.getParam("rangemax")[it])
-            final_value = max(final_value, genome.getParam("rangemin")[it])
+            final_value = min(final_value, genome.getParam("rangemax")[which_gene])
+            final_value = max(final_value, genome.getParam("rangemin")[which_gene])
 
             genome[which_gene] = final_value
 
